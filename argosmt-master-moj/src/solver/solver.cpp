@@ -809,32 +809,70 @@ void solver::instantiate(const expression & l, const expression_vector & gterms)
     }
 }
 
-void solver::chooseVariable_and_flip(unsigned index, trail * beta){
+expression_vector solver::chooseVariable_and_flip(unsigned index, expression_vector beta, unsigned lvl_0){
 	
 	double P = 0.57;
 
-	//expression_vector literals = *_initial_clauses[index];
-	//tip clauses -> *_initial_clauses[index]
-	//auto literals = *_initial_clauses[index];
-	expression_vector literals;
+	expression_vector literals; //literali iz slucajno odabrane klauze
 	for(unsigned i = 0; i < _initial_clauses[index]->size(); i++ ){
+		unsigned ind = 0;
+		for(unsigned j = lvl_0; j < beta.size(); j++){
+			if(beta[j] == (*_initial_clauses[index])[i] or 
+			beta[j] == get_literal_data((*_initial_clauses[index])[i])->get_opposite())
+			{ 
+			//ako je nulti nivo iz beta u slucajno izabranoj klauzi, preskoci
+				ind = 1;
+				break;
+			}
+
+		}
+			
+		if(ind == 1)
+			continue;//u pitanju je nulti nivo
 		literals.push_back((*_initial_clauses[index])[i]);
 	}
-	
+
 	std::vector<int> worstLiterals_indexes(literals.size(), 0);
-	for(unsigned i = 0; i < _initial_clauses.size(); i++){
-  		for(unsigned j = 0; j < (*_initial_clauses[i]).size(); j++){
-  			for(unsigned l = 0; l < literals.size(); l++){
-  				if(literals[l] == (*_initial_clauses[i])[j]){
-  					bool pol = get_literal_data((*_initial_clauses[i])[j])->is_positive();
-    				if( pol == true ? !beta->is_true((*_initial_clauses[i])[j]) : beta->is_true((*_initial_clauses[i])[j])){
-    					worstLiterals_indexes[l] += 1;
-    					}
+
+  	for(unsigned l = 0; l < literals.size(); l++){
+  		for(unsigned i = 0; i < _initial_clauses.size(); i++){
+  			unsigned ind1 = 0;
+  			
+  			if((*_initial_clauses[i]).contains_literal(literals[l])==true)
+  			 if ((*_initial_clauses[i])[(*_initial_clauses[i]).find_literal(literals[l])-(*_initial_clauses[i]).begin()] == literals[l]){
+  			for(unsigned j = 0; j < beta.size(); j++){
+  				if(true == (*_initial_clauses[i]).contains_literal(beta[j]) and beta[j] != literals[l]){
+  					ind1 = 1;//nadjen je literal koje ce drzati celu klauzu zadovoljivom
+  					break;
   				}
   			}
-  			
-  		}
+  			if(ind1 != 1)
+  			worstLiterals_indexes[l] += 1;
+  			}
+  			//nema ni jedan pozitivan literal u klauzi
+  		}	
   	}
+  	//verzija za klauze iz _learnt_clauses
+  	for(unsigned l = 0; l < literals.size(); l++){
+  		for(unsigned i = 0; i < _learnt_clauses.size(); i++){
+  			unsigned ind1 = 0;
+  			
+  			if((*_learnt_clauses[i]).contains_literal(literals[l])==true)
+  			 if ((*_learnt_clauses[i])[(*_learnt_clauses[i]).find_literal(literals[l])-(*_learnt_clauses[i]).begin()] == literals[l]){
+  			for(unsigned j = 0; j < beta.size(); j++){
+  				if(true == (*_learnt_clauses[i]).contains_literal(beta[j]) and beta[j] != literals[l]){
+  					ind1 = 1;//nadjen je literal koje ce drzati celu klauzu zadovoljivom
+  					break;
+  				}
+  			}
+  			if(ind1 != 1)
+  			worstLiterals_indexes[l] += 1;
+  			}
+  			//nema ni jedan pozitivan literal u klauzi
+  		}	
+  	}
+
+  	
   	//sada se index koristi za drugo, ali da dva puta ne deklarisem, trebalo bi da se prepise
   	auto it = std::find(worstLiterals_indexes.begin(), worstLiterals_indexes.end(), 0) ;
     if(it != worstLiterals_indexes.end()){
@@ -856,25 +894,15 @@ void solver::chooseVariable_and_flip(unsigned index, trail * beta){
     	} 
     		
     }
-    //treba mi pozicija promenljive
+
     // index je pozicija koju rotiram
-    //da poskidam sve pa vratim sa beta? mozda bolje novi da pravim
-    trail * beta_1;
-    for(unsigned i = 0; i < beta->size(); i++){
-    expression b = (*beta)[i]; ///?????????
-    expression l = literals[index];
-    		if(b == l){
-    		//da ne dodje samo do lokalnog kopiranja?
-    			beta_1->push(get_literal_data(literals[index])->get_opposite(), 0);
-    		}
-    		else {
-    			beta_1->push(b, 0);
-    		}   		
+    for(unsigned i = 0; i < beta.size(); i++)
+    	if (beta[i] == literals[index] or beta[i] ==get_literal_data(literals[index])->get_opposite()){
+    		beta[i] = get_literal_data(beta[i])->get_opposite();
+    		break;
     	}
-    	while(0 < beta->size()){
-    		beta->pop();
-    		}
-    	beta = beta_1;
+
+    return beta;
 }
 
 check_sat_response solver::solve()
@@ -887,8 +915,23 @@ check_sat_response solver::solve()
   unsigned decide_count = 0;
   unsigned num_of_layers = 0;
   unsigned local_search = 0;
-  unsigned P = 0.4;
+  double P = 0.4;
   unsigned quantifier_instantiation_count = 0;
+ 
+  expression_vector all_variable;		
+	for(unsigned i = 0; i < _initial_clauses.size(); i++)
+		for(unsigned j = 0; j < (*_initial_clauses[i]).size(); j++){
+			unsigned ind = 0;
+			for(unsigned ij =0; ij < all_variable.size(); ij++){
+ 				if(all_variable[ij] == get_literal_data((*_initial_clauses[i])[j])->get_literal() or
+  				all_variable[ij]== get_literal_data((*_initial_clauses[i])[j])->get_opposite())
+  					ind = 1;
+  			}
+  			if(ind == 0)
+  				all_variable.push_back(get_literal_data((*_initial_clauses[i])[j])->get_literal());
+  		}
+	unsigned num_of_vars = all_variable.size(); //gornji forovi da dobijem broj vars
+  
   for(unsigned i = 0; i < _theory_solvers.size(); i++)
     num_of_layers = std::max(num_of_layers, _theory_solvers[i]->get_num_of_layers());
   
@@ -911,15 +954,132 @@ check_sat_response solver::solve()
 	}
       while(!_conflict_set.is_conflict() && i < _theory_solvers.size());
       _check_and_prop_time_spent.acumulate();
-
       
-     if(_trail.size() / _num_of_vars > P /*or  _trail.size() / alpha_longest > q*/){
-        trail alpha_copy = _trail;
-        unsigned max_flips = 10;
-        unsigned flips = 0;
-        local_search = 1;
+
+
+     if(!_conflict_set.is_conflict())
+	{
+	  if(++layer < num_of_layers)
+	    continue;
+	  else
+	    layer = 0;       
+	}
+      else
+	{	  
+	  // Resolving literal from current level
+	  _explain_time_spent.start();
+	  while(!_conflict_set.all_explained())
+	    {
+	      expression l = _conflict_set.next_to_explain();
+	      _trail.get_source_theory_solver(l)->explain_literal(l);
+	    }
+	  _explain_time_spent.acumulate();
+	  //Removing subsumed literals
+	  _subsume_time_spent.start();
+	  const expression_vector & conflicting = _conflict_set.get_conflicting();
+	  for(unsigned j = 0; j < conflicting.size(); j++)
+	    {
+	      theory_solver * source_ts = _trail.get_source_theory_solver(conflicting[j]);	      
+	      // Subsumtion applied only to BCP-infered literals. 
+	      if(source_ts == _theory_solvers[0])
+	  	source_ts->explain_literal(conflicting[j]);	      
+	    }
+	  _subsume_time_spent.acumulate();
+	  assert(_conflict_set.last_level() != 0 || conflicting.empty());
+	  // Backjump or report UNSAT
+	  if(_conflict_set.last_level() != 0)
+	    {
+	      _backjump_time_spent.start();
+	      apply_backjump();
+	      _backjump_time_spent.acumulate();
+	      layer = 0;
+	      continue;
+	    }
+	  else
+	    {
+	      _empty_clause = _conflict_set.get_clause();
+	      //std::cout << "SIZE: " << _empty_clause->size() << std::endl;
+	      break;
+	    }
+	}
+     // local_search = 0;
+      if(_trail.current_level() > 0 && _restart_strategy->should_restart())
+	{ 
+	  apply_restart();
+	  continue;
+	}
+      
+      if(_forget_strategy->should_forget())
+	{
+	  unsigned start_index = get_first_unlocked_index();
+	  unsigned number_of_clauses = _forget_selection_strategy->
+	    number_of_clauses_to_forget(_learnt_clauses, start_index);      
+	  apply_forget(number_of_clauses);
+	}
+
+      expression decision_literal;
+      _heuristic_time_spent.start();
+      if(_literal_selection_strategy->select_decision_literal(decision_literal))
+	{
+	  expression dliteral = _polarity_selection_strategy->get_literal(decision_literal);
+	  _heuristic_time_spent.acumulate();
+	  _decide_time_spent.start();
+	  apply_decide(dliteral);
+	  _decide_time_spent.acumulate();
+	  if(++decide_count >= cmd_line_parser::decide_limit() && cmd_line_parser::decide_limit() != 0)
+	    return CSR_UNKNOWN;
+	}
+      else
+	{	  
+	  _heuristic_time_spent.acumulate();
+	  _state_changed = false;
+	  for(unsigned k = 0; k < _q_processors.size(); k++)
+	    {
+	      _q_processors[k]->check_quantifiers();
+	      if(_state_changed)
+		break;
+	    }
+	  if(!_state_changed)	  
+	    break;
+
+	  if(++quantifier_instantiation_count >= _quantifier_instantiation_count_limit)
+	    return CSR_UNKNOWN;
+	}
+	  
+
+	if((_trail.size()*1.0 / num_of_vars) > P/*or  _trail.size() / alpha_longest > q*/){
+     	//_local_search_time.reset_cumulative();
+    _local_search_time.start();
+
+    expression_vector alpha_copy;
+    unsigned lvl_0 = 0;
         
-        while(_trail.size() < _num_of_vars){
+       //izbacuje segmetation faults kada trazim za lvl 0
+       //ubacuje se 0 nivo u kopiju
+    if( _trail.current_level()>0){
+      while(1 != _trail.get_trail_level(_trail[lvl_0])){
+				alpha_copy.push_back(_trail[lvl_0++]);
+			}
+		}else{
+			 while(lvl_0 < _trail.size()){//ako je current_level == 0 onda ceo trail prebacujemo, mozda nema potrebe jer nakon prop ide decide
+			alpha_copy.push_back(_trail[lvl_0++]);
+			}
+		}
+
+		unsigned next_lvl = lvl_0;
+		for(unsigned lvl = 1; lvl < _trail.current_level() + 1 ; lvl++){		
+      while(lvl != _trail.get_trail_level(_trail[next_lvl])){
+	  		next_lvl++;
+			}
+			alpha_copy.push_back(_trail[next_lvl]);
+		}
+
+
+    unsigned max_flips = 500;
+    unsigned flips = 0;
+    local_search = 1;
+        
+        while(_trail.size() < num_of_vars){
         	unsigned i = 0;
         	//kompletiranje trail-a
       		_check_and_prop_time_spent.start();
@@ -967,139 +1127,124 @@ check_sat_response solver::solve()
         
         
         //kompletiran trail
-        //nulti nivo???? todo
-        trail beta = _trail;
-        //glavni/alpha se restartuje
+      expression_vector beta; 
+    	for(unsigned i = 0; i < _trail.size(); i++)
+    		beta.push_back(_trail[i]);
+        //glavni se restartuje
         apply_restart();
+        unsigned added_clause = 0;
         while (flips < max_flips) {
+        	added_clause = 0;
             //beta se koristi
         //pravljenje niza nezadovoljavajucih klauza
-        //da li moze random da se bira klauza pa proveri da li je nezadovoljavajuca
         //zauzima mesta cuvanje klauza u nizu
         //prolazimo kroz klauze, ako nismo nasli ni jedan poz lit onda redni br klauze ubacujemo u niz
         std::vector<unsigned> ord_num_clauses;
+        //za inicijalne klauze
         for(unsigned k = 0; k < _initial_clauses.size(); k++){
         	unsigned ind = 0;
   			for(unsigned kk = 0; kk < (*_initial_clauses[k]).size(); kk++){
-    			bool pol = get_literal_data((*_initial_clauses[k])[kk])->is_positive();
-    			if( pol == true ? beta.is_true((*_initial_clauses[k])[kk]) : !beta.is_true((*_initial_clauses[k])[kk]))
-    				ind = 1;
+    			for(unsigned j = 0; j < beta.size(); j++){ 				
+    				if(beta[j] == get_literal_data((*_initial_clauses[k])[kk])->get_literal())
+    					ind = 1;
+    			}
     		}
     		if(ind == 0)
     			ord_num_clauses.push_back(k);   			
     	}
+    	//za naucene klauze
+    	for(unsigned k = 0; k < _learnt_clauses.size(); k++){
+        	unsigned ind = 0;
+  			for(unsigned kk = 0; kk < (*_learnt_clauses[k]).size(); kk++){
+    			for(unsigned j = 0; j < beta.size(); j++){ 				
+    				if(beta[j] == get_literal_data((*_learnt_clauses[k])[kk])->get_literal())
+    					ind = 1;
+    			}
+    		}
+    		if(ind == 0)
+    			ord_num_clauses.push_back(k);   			
+    	}
+    	
     	if(ord_num_clauses.empty()){
+    		unsigned ind_for_theory_solvers = 0;
     		//ako je prazan niz indeksa onda je sat
-    		for(unsigned i=0; i < _num_of_vars; i++){
+    		//dodaju se svi lit kao decide
+    		for(unsigned i = lvl_0; i < beta.size(); i++){
         		apply_decide(beta[i]);
         	}
-    		_theory_solvers[i]->check_and_propagate(layer);
-        	if(_conflict_set.is_conflict()){ //konflikt
+        	//propagacija
+        	i = 0;
+        	layer = 0; //todo
+        	 _check_and_prop_time_spent.start();
+      		do
+			{	  
+	  		_state_changed = false;
+	
+		  _theory_solvers[i]->check_and_propagate(layer, local_search);
+
+		  if(_state_changed && (i != 0 || layer != 0)){
+			i = layer = 0;
+			}
+		  else{
+			i++;
+			}
+			if(_conflict_set.is_conflict()){ //konflikt
         	 	apply_restart();
-        	 	continue;
+        	 	ind_for_theory_solvers = 1;
+        	 	break;
         	}
+		}
+      while(i < _theory_solvers.size());
+      _check_and_prop_time_spent.acumulate();
+    		//ako je bilo konflikta restartuje se sve
+        	if(ind_for_theory_solvers == 1){//konflikt
+        	//restartujemo sve i beta dodajemo kao negiranu klauzu
+        	clause * cl = new clause();
+        	for(unsigned j = 0; j < beta.size(); j++)
+        		cl->push_back(get_literal_data(beta[j])->get_opposite());
+ 
+        	add_learnt_clause(cl);
+					apply_restart();
+
+  				added_clause = 1;
+        	 }
         	else{
         		return CSR_SAT;
-        	}//vreme???
+        		}
     	}
+    	//dodata je negirana klauza pri prijavi konflikta od strane resavaca pa se preskace ostatak i ponavlja flip
+    	if(added_clause == 1)
+    	continue;
     	//pozicija random klauze
     	unsigned rand_clause_index = ord_num_clauses[rand() % ord_num_clauses.size()];
-    	        
-        chooseVariable_and_flip(rand_clause_index, & beta);
+
+    		
+        beta = chooseVariable_and_flip(rand_clause_index, beta, lvl_0);
         flips++;
-
       }
-
-
-    }
-    else if(!_conflict_set.is_conflict())
-	{
-	  if(++layer < num_of_layers)
-	    continue;
-	  else
-	    layer = 0;       
-	}
-      else
-	{	  
-	  // Resolving literal from current level
-	  _explain_time_spent.start();
-	  while(!_conflict_set.all_explained())
-	    {
-	      expression l = _conflict_set.next_to_explain();
-	      _trail.get_source_theory_solver(l)->explain_literal(l);
-	    }
-	  _explain_time_spent.acumulate();
-	  //Removing subsumed literals
-	  _subsume_time_spent.start();
-	  const expression_vector & conflicting = _conflict_set.get_conflicting();
-	  for(unsigned j = 0; j < conflicting.size(); j++)
-	    {
-	      theory_solver * source_ts = _trail.get_source_theory_solver(conflicting[j]);	      
-	      // Subsumtion applied only to BCP-infered literals. 
-	      if(source_ts == _theory_solvers[0])
-	  	source_ts->explain_literal(conflicting[j]);	      
-	    }
-	  _subsume_time_spent.acumulate();
-	  assert(_conflict_set.last_level() != 0 || conflicting.empty());
-	  // Backjump or report UNSAT
-	  if(_conflict_set.last_level() != 0)
-	    {
-	      _backjump_time_spent.start();
-	      apply_backjump();
-	      _backjump_time_spent.acumulate();
-	      layer = 0;
-	      continue;
-	    }
-	  else
-	    {
-	      _empty_clause = _conflict_set.get_clause();
-	      //std::cout << "SIZE: " << _empty_clause->size() << std::endl;
-	      break;
-	    }
-	}
-      local_search = 0;
-      if(_trail.current_level() > 0 && _restart_strategy->should_restart())
-	{ 
-	  apply_restart();
-	  continue;
-	}
       
-      if(_forget_strategy->should_forget())
-	{
-	  unsigned start_index = get_first_unlocked_index();
-	  unsigned number_of_clauses = _forget_selection_strategy->
-	    number_of_clauses_to_forget(_learnt_clauses, start_index);      
-	  apply_forget(number_of_clauses);
-	}
-
-      expression decision_literal;
-      _heuristic_time_spent.start();
-      if(_literal_selection_strategy->select_decision_literal(decision_literal))
-	{
-	  expression dliteral = _polarity_selection_strategy->get_literal(decision_literal);
-	  _heuristic_time_spent.acumulate();
-	  _decide_time_spent.start();
-	  apply_decide(dliteral);
-	  _decide_time_spent.acumulate();
-	  if(++decide_count >= cmd_line_parser::decide_limit() && cmd_line_parser::decide_limit() != 0)
-	    return CSR_UNKNOWN;
-	}
-      else
+	 // decide literali
+	for(unsigned j = lvl_0; j < alpha_copy.size(); j++){
+		//PRETPOSTAVKA: PRI PROPAGACIJI NECE BITI DODAT NEKI DECIDE LITERAL SA alpha_copy
+		apply_decide(alpha_copy[j]);
+	 i = 0;
+      _check_and_prop_time_spent.start();
+      do
 	{	  
-	  _heuristic_time_spent.acumulate();
 	  _state_changed = false;
-	  for(unsigned k = 0; k < _q_processors.size(); k++)
-	    {
-	      _q_processors[k]->check_quantifiers();
-	      if(_state_changed)
-		break;
-	    }
-	  if(!_state_changed)	  
-	    break;
+	  //	  check_count++;
+	  _theory_solvers[i]->check_and_propagate(layer);
 
-	  if(++quantifier_instantiation_count >= _quantifier_instantiation_count_limit)
-	    return CSR_UNKNOWN;
+	  if(_state_changed && (i != 0 || layer != 0))
+	    i = layer = 0;
+	  else
+	    i++;
 	}
+      while(!_conflict_set.is_conflict() && i < _theory_solvers.size());
+      _check_and_prop_time_spent.acumulate();
+      
+    }  
+    }
     }
   
   return !_conflict_set.is_conflict() ? CSR_SAT : CSR_UNSAT;
@@ -1127,6 +1272,7 @@ void solver::print_reports(std::ostream & ostr)
 {
     ostr << "-------- SOLVER OVERALL ---------" << std::endl;
     ostr << "Time spent in check_and_propagate: " << _check_and_prop_time_spent.cumulative_time() << std::endl;
+    ostr << "Time spent in local search: " <<_local_search_time.cumulative_time() << std::endl;
     ostr << "Time spent in heuristics: " << _heuristic_time_spent.cumulative_time() << std::endl;
     ostr << "Time spent in decide: " << _decide_time_spent.cumulative_time() << std::endl;
     ostr << "Time spent in backjump: " << _backjump_time_spent.cumulative_time() << std::endl;
