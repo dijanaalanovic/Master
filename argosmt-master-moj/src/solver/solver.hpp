@@ -298,6 +298,7 @@ private:
   wall_clock _backjump_time_spent;
   wall_clock _heuristic_time_spent;
   wall_clock _decide_time_spent;
+  wall_clock _local_search_time;
 
   unsigned _quantifier_instantiation_count_limit;
   unsigned _quantifier_instantiation_term_size_limit;
@@ -631,7 +632,7 @@ public:
   void skolemize(const expression & l);
   void instantiate(const expression & l, const expression_vector & gterms);
   
-  void chooseVariable_and_flip(unsigned index, trail * beta);
+  expression_vector chooseVariable_and_flip(unsigned index, expression_vector beta, unsigned lvl_0);
   
   check_sat_response solve();
   
