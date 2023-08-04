@@ -1230,7 +1230,6 @@ check_sat_response solver::solve()
 		}
       while(i < _theory_solvers.size());
       _check_and_prop_time_spent.acumulate();
-      	  _conflict_set.reset_conflict();
 	   
     		//ako je bilo konflikta restartuje se sve
         	if(ind_for_theory_solvers == 1){//konflikt
