@@ -292,7 +292,7 @@ private:
     _lookup_history.push(std::cref(ret.first->first));
   }
   
-  void new_expression(const expression & e);
+  void new_expression(const expression & e, int local_search = 0);
   void merge(const expression & a, const expression & b)
   {
     std::queue<expression_pair> pending_unions;
@@ -303,12 +303,12 @@ private:
 			   const expression & b,
 			   bool explain);
   void process_pending_unions(std::queue<expression_pair> & pending_unions,
-			      bool explain = false);
+			      bool explain = false, int local_search = 0);
   void check_eq_propagations(const expression_vector & cl1, 
-			  const expression_vector & cl2);
+			  const expression_vector & cl2, int local_search = 0);
   void check_diseq_propagations(const expression_vector & cl1,
 				const expression_vector & cl2,
-				const expression & cdiseq);
+				const expression & cdiseq, int local_ssearch = 0);
   expression find_common_ancestor(expression_to_expression_map & proof_state, 
 				  expression a, expression b);
   void explain_along_path(expression_to_expression_map & proof_state, 
@@ -325,14 +325,14 @@ private:
   void explain_conflict(const expression & left, const expression & right, explanation & expl,
 			const expression & cflt1, const expression & cflt2 = expression());
   lookup_key get_lookup_key(const expression & exp);
-  void register_expression(const expression & exp);
+  void register_expression(const expression & exp, int local_search = 0);
   expression canonize_eq_diseq(const expression & l);
-  void check_predicate_propagations(const expression & ra, const expression & rb);
+  void check_predicate_propagations(const expression & ra, const expression & rb, int local_search = 0);
   bool get_simplest_in_class(const expression & e, expression & sim);  
   bool check_literal_relevancy(const expression & e);
   bool check_term_relevancy(const expression & e);
-  void apply_trivial_propagation(const expression & l);
-  void process_assertion(const expression & l);
+  void apply_trivial_propagation(const expression & l, int local = 0);
+  void process_assertion(const expression & l, int local_search = 0);
   
 public:
   euf_theory_solver(solver & sl)
