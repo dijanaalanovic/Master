@@ -548,14 +548,12 @@ void arithmetic_theory_solver::assert_upper(const expression & l, int local_sear
   
   _bound_changed = true;
 
-  if(bound < u_data->get_lower_bound())
+  if(bound < u_data->get_lower_bound() and local_search != 1)
     {
-      explanation conflicting; // todo, da li ce se samo restartovati
+      explanation conflicting; 
       conflicting.push_back(u_data->get_lower_bound_relation());
       conflicting.push_back(l);
-      if(!local_search){
-        _solver.apply_conflict(conflicting, this);
-      }
+      _solver.apply_conflict(conflicting, this);
       return;
     }
   
@@ -590,14 +588,12 @@ void arithmetic_theory_solver::assert_lower(const expression & l, int local_sear
 
   _bound_changed = true;
 
-  if(bound > u_data->get_upper_bound())
+  if(bound > u_data->get_upper_bound() and local_search != 1)
     {
       explanation conflicting;
       conflicting.push_back(u_data->get_upper_bound_relation());
       conflicting.push_back(l);
-      if (!local_search){
       _solver.apply_conflict(conflicting, this);
-      }
       return;
     }
 
@@ -627,35 +623,28 @@ void arithmetic_theory_solver::assert_both(const expression & l, int local_searc
   const constraint & cst = l_data->get_constraint();
   assert(bound.infinity == I_NONE);
 
-  if(u_data->is_integer() && !is_integer_value(cst.bound.first))
+  if(u_data->is_integer() && !is_integer_value(cst.bound.first) and local_search != 1)
     {
       explanation conflicting;
-      conflicting.push_back(l);
-      if (!local_search){
       _solver.apply_conflict(conflicting, this);
-      }
     }
   else
     {
-      if(bound < u_data->get_lower_bound())
+      if(bound < u_data->get_lower_bound() and local_search != 1)
 	{
 	  explanation conflicting;
 	  conflicting.push_back(u_data->get_lower_bound_relation());
 	  conflicting.push_back(l);
-      if (!local_search){
 	  _solver.apply_conflict(conflicting, this);
-      }
 	  return;
 	}
 
-      if(bound > u_data->get_upper_bound())
+      if(bound > u_data->get_upper_bound() and local_search != 1)
 	{
 	  explanation conflicting;
 	  conflicting.push_back(u_data->get_upper_bound_relation());
 	  conflicting.push_back(l);
-      if (!local_search){
 	  _solver.apply_conflict(conflicting, this);
-      }
 	  return;
 	}
   
@@ -888,18 +877,14 @@ void arithmetic_theory_solver::check_and_propagate(unsigned layer, unsigned loca
       _shuffled = true;
     }
 
-  for(unsigned i = 0; i < _new_trivial_propagations.size(); i++) //todo
-    if(!local_search){
-    apply_trivial_propagation(_new_trivial_propagations[i]);
-    }
+  for(unsigned i = 0; i < _new_trivial_propagations.size(); i++) 
+    apply_trivial_propagation(_new_trivial_propagations[i], local_search);
   _new_trivial_propagations.clear();
 
   if(_just_backjumped)
     {
       for(unsigned i = 0; i < _trivial_propagations.size(); i++)
-      if(!local_search){
-	    apply_trivial_propagation(_trivial_propagations[i]);
-      }
+	    apply_trivial_propagation(_trivial_propagations[i], local_search);
       _just_backjumped = false;
     }
 
@@ -912,7 +897,7 @@ void arithmetic_theory_solver::check_and_propagate(unsigned layer, unsigned loca
 	if(!check(bu))
 	  {
 	    explanation expl;
-	    generate_conflict_explanation(bu, expl); //todo
+	    //generate_conflict_explanation(bu, expl); //todo
 	  }
 	else
 	  {
@@ -995,17 +980,17 @@ void arithmetic_theory_solver::found_trivial_propagation(const unknown_value & c
   _new_trivial_propagations.push_back(l_pos);
 }
 
-void arithmetic_theory_solver::apply_trivial_propagation(const expression & l)
+void arithmetic_theory_solver::apply_trivial_propagation(const expression & l, int local_search)
 {
   const extended_boolean l_value = _solver.get_trail().get_value(l);
   if(l_value == EB_UNDEFINED)
     _solver.apply_propagate(l, this);
-  else if(l_value == EB_FALSE)
+  else if(l_value == EB_FALSE and local_search != 1)
     {
       explanation conflicting;
       conflicting.push_back(_solver.get_literal_data(l)->get_opposite());
       _solver.apply_conflict(conflicting, this);
-    }  
+    } 
 }
 
 void arithmetic_theory_solver::pivot(const expression & bu, const expression & nbu)
@@ -1625,7 +1610,6 @@ void arithmetic_theory_solver::propagate_weaker_constraints(const expression & u
 	{
 	  explanation expl; 
 	  expl.reserve(10);
-	  if (!local_search){//todo
 	  if(cstsi_value == EB_UNDEFINED)	  
 	    {
 	      //std::cout << "PROP: " << csts[i] << " (" << c.bound << ":" << c.type << ")" << std::endl;	      
@@ -1633,15 +1617,16 @@ void arithmetic_theory_solver::propagate_weaker_constraints(const expression & u
 	      _solver.apply_propagate(csts[i], this);
 	      _data.get_data(csts[i])->literal_explanation() = expl;
 	    }
-	  else if(cstsi_value == EB_FALSE)
+	  else if(cstsi_value == EB_FALSE and local_search != 1)
 	    {
 	      //	      std::cout << "CONS: " << csts[i] << std::endl;
 	      generate_propagation_explanation(csts[i], c, expl);
 	      expl.push_back(_solver.get_literal_data(csts[i])->get_opposite());
 	      _solver.apply_conflict(expl, this);
 	      break;
-	    }
-      }
+	    } 
+	    
+
 	}
       //   else
       //	std::cout << "NOT WEAKER: " << csts[i] << std::endl;
@@ -1781,7 +1766,6 @@ void arithmetic_theory_solver::check_equalities(int local_search)
 	    {
 	      extended_boolean eb = _solver.get_trail().get_value(u_csts[j]);
 	      explanation expl;
-          if(!local_search){
 	      if(eb == EB_UNDEFINED)
 		{
 		  generate_propagation_explanation(u_csts[j], cst, expl);
@@ -1789,13 +1773,12 @@ void arithmetic_theory_solver::check_equalities(int local_search)
 		  //std::cout << "PROPAGATING: " << u_csts[j] << std::endl;
 		  _data.get_data(u_csts[j])->literal_explanation() = expl;
 		}
-	      else if(eb == EB_FALSE)
+	      else if(eb == EB_FALSE and local_search != 1)
 		{
 		  generate_propagation_explanation(u_csts[j], cst, expl);
 		  expl.push_back(_solver.get_literal_data(u_csts[j])->get_opposite());
 		  _solver.apply_conflict(expl, this);
-		}
-          }
+		} 
 	      j--;
 	    }	  
 	}
