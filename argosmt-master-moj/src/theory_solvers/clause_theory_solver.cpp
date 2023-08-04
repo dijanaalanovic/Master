@@ -84,12 +84,13 @@ unsigned clause_theory_solver::find_initial_watches(clause * cl, unsigned & w0, 
 void clause_theory_solver::set_initial_watches(clause * cl, int local_search )
 {
   // special case -- empty clause!!
-  if(cl->size() == 0 && !local_search)
-    {
+  if(cl->size() == 0 )
+    {	if(local_search != 1){
       _solver.apply_conflict(explanation(&_solver, cl), this);
+      count_conflicts(cl);
+      } 
       if(_solver.get_trail().current_level() != 0)
 	_dead_clauses.push_back(cl);
-      count_conflicts(cl);
     }
   // special case -- unit clause!!
   else if(cl->size() == 1)
@@ -97,15 +98,15 @@ void clause_theory_solver::set_initial_watches(clause * cl, int local_search )
       extended_boolean value = _solver.get_trail().get_value((*cl)[0]);
       if(value == EB_UNDEFINED)
 	{
-	  _solver.apply_propagate((*cl)[0], this);
+	  _solver.apply_propagate((*cl)[0], this, local_search);
 	  set_reason_clause((*cl)[0], cl, 0);
 	  count_propagations(cl);
 	}
-      else if(value == EB_FALSE && !local_search)
+      else if(value == EB_FALSE && local_search != 1)
 	{
 	  _solver.apply_conflict(explanation(&_solver, cl), this);
 	  count_conflicts(cl);
-	}
+	} 
 
       if(_solver.get_trail().current_level() != 0)
 	_dead_clauses.push_back(cl);
@@ -115,11 +116,11 @@ void clause_theory_solver::set_initial_watches(clause * cl, int local_search )
       unsigned w0, w1;
       unsigned w = find_initial_watches(cl, w0, w1);
 
-      if(w == 0 && !local_search)
+      if(w == 0 && local_search != 1)
 	{
 	  _solver.apply_conflict(explanation(&_solver, cl), this);
 	  count_conflicts(cl);
-	}
+	}  
       else if(w == 1)
 	{
 	  expression wl = (*cl)[w0];
@@ -128,11 +129,11 @@ void clause_theory_solver::set_initial_watches(clause * cl, int local_search )
 
 	  if(value == EB_UNDEFINED)
 	    {
-	      _solver.apply_propagate(wl, this);
+	      _solver.apply_propagate(wl, this, local_search);
 	      set_reason_clause(wl, cl, w0);
 	      count_propagations(cl);
 	    }
-	  else if(value == EB_FALSE && !local_search) // NEVER HAPPENS!!
+	  else if(value == EB_FALSE && local_search != 1) // NEVER HAPPENS!!
 	    {
 	      _solver.apply_conflict(explanation(&_solver, cl), this);
 	      count_conflicts(cl);
@@ -235,14 +236,14 @@ void clause_theory_solver::process_watch_list(const expression & lp, unsigned lo
 
       if(owl_value == EB_UNDEFINED)
 	{
-	  _solver.apply_propagate(owl, this);
+	  _solver.apply_propagate(owl, this, local_search);
 	  set_reason_clause(owl, cl, owl_pos);
 	  watch_list[k++] = cl;
 	  count_propagations(cl);
 	}
       else // owl_value == EB_FALSE
 	{
-        if (!local_search){
+        if (local_search != 1){
 	  _solver.apply_conflict(explanation(&_solver, cl), this);
 	  count_conflicts(cl);
     }
@@ -413,7 +414,7 @@ void clause_theory_solver::check_and_propagate(unsigned layer, unsigned local_se
     {
       expression l = _solver.get_trail()[_current_trail_pos++];
       expression lp = _solver.get_literal_data(l)->get_opposite();
-      process_watch_list(lp, local_search);
+      process_watch_list(lp, 1);
     }
   
   
