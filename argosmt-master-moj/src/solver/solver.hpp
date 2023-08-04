@@ -412,6 +412,11 @@ public:
   {
     return _trail;
   }
+  
+  conflict_set & get_conflict_set()
+  {
+    return _conflict_set;
+  }
 
   const expression_vector & literals() const
   {
@@ -620,7 +625,7 @@ public:
 				       int polarity_hint,
 				       bool add_to_polarity_hint);  
   void apply_decide(const expression & l);
-  void apply_propagate(const expression & l, theory_solver * source_ts);
+  void apply_propagate(const expression & l, theory_solver * source_ts, int local_search = 0);
   void apply_conflict(const explanation & conflicting, theory_solver * conflict_ts);
   void apply_explain(const expression & l, const explanation & expl);
   void apply_theory_lemma(clause * cl); 
@@ -632,7 +637,7 @@ public:
   void skolemize(const expression & l);
   void instantiate(const expression & l, const expression_vector & gterms);
   
-  expression_vector chooseVariable_and_flip(unsigned index, expression_vector beta, unsigned lvl_0);
+  expression_vector chooseVariable_and_flip(unsigned in_or_lt, unsigned index, expression_vector beta, unsigned lvl_0);
   
   check_sat_response solve();
   
