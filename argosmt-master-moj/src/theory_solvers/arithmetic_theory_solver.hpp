@@ -918,7 +918,7 @@ private:
   void search_unknowns_rec(const expression & e);
   void found_trivial_propagation(const unknown_value & c, const function_symbol & fs, 
 				 expression l_pos, expression l_neg);
-  void apply_trivial_propagation(const expression & l);
+  void apply_trivial_propagation(const expression & l, int local = 0);
   void process_assertion(const expression & l, int local_search = 0);
   void process_assertions(int local_search = 0);
   void pivot(const expression & bu, const expression & nbu);
