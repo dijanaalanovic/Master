@@ -469,7 +469,7 @@ void arithmetic_theory_solver::process_assertions(int local_search )
       //  continue;
 
       //std::cout << "ASSERTING: " << l << std::endl;
-      process_assertion(l);
+      process_assertion(l, local_search);
     }
   }else {
     while( _current_assertion_pos < _solver.get_trail().size())
@@ -514,7 +514,7 @@ void arithmetic_theory_solver::process_assertion(const expression & l, int local
 	  assert_both(l, local_search);
 	  break;
 	case B_SPLIT:
-	  assert_split(l);
+	  assert_split(l, local_search);
 	  break;
 	}
     }
@@ -908,7 +908,7 @@ void arithmetic_theory_solver::check_and_propagate(unsigned layer, unsigned loca
 	      {
 		if(_eq_intro)
 		  introduce_equalities();
-		check_equalities();
+		check_equalities(local_search);
 		process_assertions(local_search);
 	      }
 	    if(++_bound_refinements_count >= _bound_ref_period)
