@@ -835,7 +835,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 	else{
 	for(unsigned i = 0; i < _learnt_clauses[index]->size(); i++ ){
 		unsigned ind = 0;
-		for(unsigned j = lvl_0; j < beta.size(); j++){
+		for(unsigned j = 0; j < lvl_0; j++){
 			if(beta[j] == (*_learnt_clauses[index])[i] or 
 			beta[j] == get_literal_data((*_learnt_clauses[index])[i])->get_opposite())
 			{ 
@@ -846,7 +846,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 
 		}
 			
-		if(ind == 1)
+		if(ind != 1)
 		literals.push_back((*_learnt_clauses[index])[i]);
 	}
 	}
@@ -1098,7 +1098,7 @@ check_sat_response solver::solve()
 
     unsigned max_flips = 400;
     unsigned flips = 0;
-    local_search = 1;
+   // local_search = 1;
         
 
         while(_trail.size() < num_of_vars){
@@ -1239,7 +1239,7 @@ check_sat_response solver::solve()
         		cl->push_back(get_literal_data(beta[j])->get_opposite());
  
         	add_learnt_clause(cl);
-					apply_restart();
+					//apply_restart();
 
   				added_clause = 1;
         	 }
