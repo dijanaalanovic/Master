@@ -1168,13 +1168,12 @@ check_sat_response solver::solve()
         	unsigned ind = 0;
   			//for(unsigned kk = 0; kk < (*_initial_clauses[k]).size(); kk++){
     			for(unsigned j = 0; j < beta.size(); j++){ 
-    				if(true == (*_initial_clauses[k]).contains_literal(beta[j])){		
-    				//if(beta[j] == get_literal_data((*_initial_clauses[k])[kk])->get_literal()){
-    				//std::cout<<"_init_cl: "<<(*_initial_clauses[k])[(*_initial_clauses[k]).find_literal(beta[j])-(*_initial_clauses[k]).begin()]<<", beta: "<<beta[j]<<std::endl;
-    					ind = 1;
-    					break;
+    				if(true == (*_initial_clauses[k]).contains_literal(beta[j])){	
+					if(false == (*_initial_clauses[k]).contains_literal(get_literal_data(beta[j])->get_opposite()))	{
+    						ind = 1;
+    						break;
+					}
     				}
-    			//}
     			/*if(ind == 1 )
     			break;*/
     		}
@@ -1187,12 +1186,12 @@ check_sat_response solver::solve()
         	unsigned ind = 0;
   			//for(unsigned kk = 0; kk < (*_learnt_clauses[k]).size(); kk++){
     			for(unsigned j = 0; j < beta.size(); j++){ 
-    				if(true == (*_learnt_clauses[k]).contains_literal(beta[j])){		
-    				//if(beta[j] == get_literal_data((*_learnt_clauses[k])[kk])->get_literal()){
-    					ind = 1;
-    					break;
+    				if(true == (*_learnt_clauses[k]).contains_literal(beta[j])){
+					if(false == (*_initial_clauses[k]).contains_literal(get_literal_data(beta[j])->get_opposite()))	{
+    						ind = 1;
+    						break;
+					}
     				}
-    			//}
     			/*if(ind == 1 )
     			break;*/
     		}
