@@ -817,7 +817,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 	for(unsigned i = 0; i < _initial_clauses[index]->size(); i++ ){
 		unsigned ind = 0;
 		//std::cout<<"(*_initial_clauses[index])[i] "<<(*_initial_clauses[index])[i]<<", ";
-		for(unsigned j = 0; j < lvl_0; j++){
+		for(unsigned j = lvl_0; j < beta.size(); j++){
 			if(beta[j] == (*_initial_clauses[index])[i] or 
 			beta[j] == get_literal_data((*_initial_clauses[index])[i])->get_opposite())
 			{ 
@@ -835,7 +835,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 	else{
 	for(unsigned i = 0; i < _learnt_clauses[index]->size(); i++ ){
 		unsigned ind = 0;
-		for(unsigned j = 0; j < lvl_0; j++){
+		for(unsigned j = lvl_0; j < beta.size(); j++){
 			if(beta[j] == (*_learnt_clauses[index])[i] or 
 			beta[j] == get_literal_data((*_learnt_clauses[index])[i])->get_opposite())
 			{ 
@@ -1099,7 +1099,10 @@ check_sat_response solver::solve()
     unsigned max_flips = 400;
     unsigned flips = 0;
    // local_search = 1;
-        
+    while(!_conflict_set.all_explained()){
+              expression l = _conflict_set.next_to_explain();
+              _trail.get_source_theory_solver(l)->explain_literal(l);
+            }    
 
         while(_trail.size() < num_of_vars){
         	unsigned i = 0;
@@ -1167,7 +1170,7 @@ check_sat_response solver::solve()
         for(unsigned k = 0; k < _initial_clauses.size(); k++){
         	unsigned ind = 0;
   			//for(unsigned kk = 0; kk < (*_initial_clauses[k]).size(); kk++){
-    			for(unsigned j = 0; j < beta.size(); j++){ 
+    			for(unsigned j = lvl_0; j < beta.size(); j++){ 
     				if(true == (*_initial_clauses[k]).contains_literal(beta[j])){	
 					if(false == (*_initial_clauses[k]).contains_literal(get_literal_data(beta[j])->get_opposite()))	{
     						ind = 1;
@@ -1185,7 +1188,7 @@ check_sat_response solver::solve()
     	for(unsigned k = 0; k < _learnt_clauses.size(); k++){
         	unsigned ind = 0;
   			//for(unsigned kk = 0; kk < (*_learnt_clauses[k]).size(); kk++){
-    			for(unsigned j = 0; j < beta.size(); j++){ 
+    			for(unsigned j = lvl_0; j < beta.size(); j++){ 
     				if(true == (*_learnt_clauses[k]).contains_literal(beta[j])){
 					if(false == (*_initial_clauses[k]).contains_literal(get_literal_data(beta[j])->get_opposite()))	{
     						ind = 1;
@@ -1262,8 +1265,8 @@ check_sat_response solver::solve()
         	beta = chooseVariable_and_flip(1, index, beta, lvl_0);
         	}
 		else {
-		double index = rand() % ord_num_clauses2.size();
-        	beta = chooseVariable_and_flip(2, ord_num_clauses2[index], beta, lvl_0);
+		unsigned index = ord_num_clauses2[rand() % ord_num_clauses2.size()];
+            	beta = chooseVariable_and_flip(2, index, beta, lvl_0);
         	}
         flips++;
       }
