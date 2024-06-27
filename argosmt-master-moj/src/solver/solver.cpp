@@ -817,7 +817,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 	for(unsigned i = 0; i < _initial_clauses[index]->size(); i++ ){
 		unsigned ind = 0;
 		//std::cout<<"(*_initial_clauses[index])[i] "<<(*_initial_clauses[index])[i]<<", ";
-		for(unsigned j = lvl_0; j < beta.size(); j++){
+		for(unsigned j = 0; j < lvl_0; j++){
 			if(beta[j] == (*_initial_clauses[index])[i] or 
 			beta[j] == get_literal_data((*_initial_clauses[index])[i])->get_opposite())
 			{ 
@@ -835,7 +835,7 @@ expression_vector solver::chooseVariable_and_flip(unsigned in_or_lt, unsigned in
 	else{
 	for(unsigned i = 0; i < _learnt_clauses[index]->size(); i++ ){
 		unsigned ind = 0;
-		for(unsigned j = lvl_0; j < beta.size(); j++){
+		for(unsigned j = 0; j < lvl_0; j++){
 			if(beta[j] == (*_learnt_clauses[index])[i] or 
 			beta[j] == get_literal_data((*_learnt_clauses[index])[i])->get_opposite())
 			{ 
